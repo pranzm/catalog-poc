@@ -1,0 +1,344 @@
+{
+  "info": {
+    "_postman_id": "6bcdfdb1-203b-444b-8c15-0d74020c1cf3",
+    "name": "Catalog POC (FastAPI, OCR, No-LLM)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "02 - Extract (file upload)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let json = pm.response.json();",
+              "pm.environment.set('file_id', json.file_id);",
+              "pm.environment.set('raw_text', json.text);",
+              "pm.test('Extract returned text', function(){ pm.expect((json.text||'').length).to.be.above(0); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "{{sampleFile}}"
+            },
+            {
+              "key": "ocr",
+              "value": "{{ocr}}",
+              "type": "text"
+            },
+            {
+              "key": "ocr_lang",
+              "value": "{{ocr_lang}}",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/extract?ocr={{ocr}}&ocr_lang={{ocr_lang}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "extract"
+          ],
+          "query": [
+            {
+              "key": "ocr",
+              "value": "{{ocr}}"
+            },
+            {
+              "key": "ocr_lang",
+              "value": "{{ocr_lang}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "03 - Segment (use raw_text)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let data = pm.response.json();",
+              "pm.environment.set('blocks', JSON.stringify(data.blocks||[]));",
+              "let raw = pm.environment.get('raw_text') || '';",
+              "let blocks = data.blocks || [];",
+              "let selected = [];",
+              "for (let i=0;i<Math.min(2, blocks.length);i++){",
+              "  let b = blocks[i];",
+              "  selected.push(raw.substring(b.start, b.end));",
+              "}",
+              "pm.environment.set('block_texts', JSON.stringify({ block_texts: selected }));",
+              "pm.test('Segment returned at least one block', function(){ pm.expect(blocks.length).to.be.above(0); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"raw_text\": {{raw_text}}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/segment",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "segment"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "04 - Map (use block_texts from previous step)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let json = pm.response.json();",
+              "pm.environment.set('products', JSON.stringify(json.products||[]));",
+              "pm.test('Got products array', function(){ pm.expect(Array.isArray(json.products)).to.be.true; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{{block_texts}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/map",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "map"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "05 - Template Generate",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let json = pm.response.json();",
+              "pm.environment.set('template_object', JSON.stringify(json));",
+              "if (json.id) pm.environment.set('template_id', json.id);",
+              "pm.test('Template generated', function(){ pm.expect(json.name).to.exist; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"parryware_template\",\n  \"products\": {{products}}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/template/generate",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "template",
+            "generate"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "06 - Template Persist (save the generated template)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let json = pm.response.json();",
+              "pm.environment.set('template_id', json.id);",
+              "pm.test('Template persisted', function(){ pm.expect(json.id).to.exist; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{{template_object}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/template/persist",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "template",
+            "persist"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "07 - Templates (list)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let arr = pm.response.json();",
+              "if (Array.isArray(arr) && arr.length>0 && !pm.environment.get('template_id')) {",
+              "  pm.environment.set('template_id', arr[0].id);",
+              "}",
+              "pm.test('Templates listed', function(){ pm.expect(Array.isArray(arr)).to.be.true; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/templates",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "templates"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "08 - Generate Catalog (HTML)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let json = pm.response.json();",
+              "if (json.doc_id) pm.environment.set('doc_id', json.doc_id);",
+              "if (json.preview_url) pm.environment.set('preview_url', json.preview_url);",
+              "pm.test('Catalog generated', function(){ pm.expect(json.doc_id).to.exist; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"template_id\": \"{{template_id}}\",\n  \"format\": \"html\",\n  \"products\": {{products}}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/generate",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "generate"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "09 - Get Generated HTML",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/generated/{{doc_id}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "generated",
+            "{{doc_id}}"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

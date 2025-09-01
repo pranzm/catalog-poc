@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+pdfplumber
+python-docx
+beautifulsoup4
+jinja2
+weasyprint==53.3
+pytesseract
+pdf2image
+Pillow
+opencv-python

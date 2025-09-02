@@ -8,8 +8,10 @@ from bs4 import BeautifulSoup
 import pdfplumber
 from docx import Document
 from PIL import Image
+from fastapi import Body
 import pytesseract
 from pdf2image import convert_from_bytes
+
 
 from .models import (
     Block, SegmentResult, Product, MapResult,
@@ -85,11 +87,10 @@ async def extract(file: UploadFile = File(...), ocr: bool=False, ocr_lang: str="
 
 # ---------- Segment ----------
 @app.post("/segment", response_model=SegmentResult)
-def segment(raw_text: str):
+def segment(raw_text: str = Body(..., embed=True)):
     idxs = split_blocks(raw_text)
     blocks = [Block(start=s, end=e, preview=raw_text[s:e][:60]) for s, e in idxs]
     return SegmentResult(blocks=blocks)
-
 # ---------- Map ----------
 class MapRequest(BaseModel):
     block_texts: List[str]

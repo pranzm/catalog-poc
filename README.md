@@ -33,7 +33,7 @@ Click the eye icon by the environment → click Edit and set:
 
 baseUrl: http://127.0.0.1:8000
 
-sampleFile: absolute path to a real file on your machine (e.g. C:\Users\you\Downloads\catalog.pdf or /Users/you/Desktop/catalog.pdf)
+sampleFile: absolute path to a real file on your machine (e.g. `C:\\Users\\you\\Downloads\\catalog.pdf` or `/Users/you/Desktop/catalog.pdf`)
 
 ocr: false for digital PDFs/Docx/HTML; set true for images/scanned PDFs
 
